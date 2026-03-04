@@ -92,7 +92,20 @@ class IntegratedHarvester:
             if path == '' or path == '/':
                 path = 'index.html'
             
+            # Remove leading slash
+            path = path.lstrip('/')
+            
             file_path = self.site_dir / path
+            
+            # If not found, try without domain prefix
+            if not file_path.exists():
+                # Try finding in subdirectories
+                for subdir in self.site_dir.iterdir():
+                    if subdir.is_dir():
+                        alt_path = subdir / path
+                        if alt_path.exists():
+                            file_path = alt_path
+                            break
             
             if file_path.exists() and file_path.is_file():
                 # Determine content type
@@ -118,6 +131,7 @@ class IntegratedHarvester:
                 with open(file_path, 'rb') as f:
                     return Response(f.read(), mimetype=content_type)
             else:
+                logger.warning(f"File not found: {path} (tried {file_path})")
                 return "File not found", 404
                 
         except Exception as e:
