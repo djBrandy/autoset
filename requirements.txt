@@ -7,3 +7,4 @@ pyngrok>=7.0.0
 beautifulsoup4>=4.12.0
 lxml>=4.9.0
 simple-websocket>=1.0.0\nflask-sock>=0.7.0
+python-socketio>=5.0.0\npython-engineio>=4.0.0
