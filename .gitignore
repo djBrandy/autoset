@@ -1,0 +1,25 @@
+# API Keys and Secrets
+autoset/config/*_keys.json
+
+# Database and logs
+*.db
+*.log
+logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+
+# Workspaces
+workspaces/
+.temp/
+
+# Harvested data
+harvested/
+captured/
