@@ -26,11 +26,11 @@ cp autoset/config/groq_keys.json.example autoset/config/groq_keys.json
 python demo.py
 
 # Start AutoSET
-python autoset/agent.py
+python autoset.py
 
 # Or with specific LLM provider
-python autoset/agent.py --provider groq
-python autoset/agent.py --provider ollama
+python autoset.py --provider groq
+python autoset.py --provider ollama
 ```
 
 ## Commands

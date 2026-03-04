@@ -21,7 +21,10 @@ cp autoset/config/*.json.example autoset/config/*.json
 # Edit the .json files with your keys
 
 # Run AutoSET
-python autoset/agent.py
+python autoset.py
+
+# Or with specific provider
+python autoset.py --provider groq
 
 # Example commands
 /harvest https://example.com
